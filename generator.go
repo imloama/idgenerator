@@ -12,17 +12,17 @@ import (
 )
 
 const (
-	minusOne           int64  = -1
-	WorkerIdBits       uint64 = 5
-	DataCenterIdBits   uint64 = 5
-	MaxWorkerId        int64  = minusOne ^ (minusOne << WorkerIdBits)
-	MaxDataCenterId    int64  = minusOne ^ (minusOne << DataCenterIdBits)
-	SequenceBits       uint64 = 12
-	WorkerIdShift      uint64 = SequenceBits
-	DataCenterIdShift  uint64 = SequenceBits + WorkerIdBits
-	TimestampLeftShift uint64 = SequenceBits + WorkerIdBits + DataCenterIdBits
-	SequenceMask       int64  = minusOne ^ (minusOne << SequenceBits)
-	twepoch            int64  = 1288834974657
+	MINUSONE           int64  = -1
+	WORKERIDBITS       uint64 = 5
+	DATACENTERIDBITS   uint64 = 5
+	MAXWORKERID        int64  = MINUSONE ^ (MINUSONE << WORKERIDBITS)
+	MAXDATACENTERID    int64  = MINUSONE ^ (MINUSONE << DATACENTERIDBITS)
+	SEQUENCEBITS       uint64 = 12
+	WORKERIDSHIFT      uint64 = SEQUENCEBITS
+	DATACENTERIDSHIFT  uint64 = SEQUENCEBITS + WORKERIDBITS
+	TIMESTAMPLEFTSHIFT uint64 = SEQUENCEBITS + WORKERIDBITS + DATACENTERIDBITS
+	SEQUENCEMASK       int64  = MINUSONE ^ (MINUSONE << SEQUENCEBITS)
+	TWEPOCH            int64  = 1288834974657
 )
 
 var lock sync.Mutex
@@ -40,11 +40,11 @@ type IdWorker struct {
 
 //生成ID生成器实例
 func NewIdWorker(workerId, dataCenterId int64) (*IdWorker, error) {
-	if workerId > MaxWorkerId || workerId < 0 {
+	if workerId > MAXWORKERID || workerId < 0 {
 		return nil, errors.New(fmt.Sprintf("worker Id can't be greater than %d or less than 0", workerId))
 	}
 
-	if dataCenterId > MaxDataCenterId || dataCenterId < 0 {
+	if dataCenterId > MAXDATACENTERID || dataCenterId < 0 {
 		return nil, errors.New(fmt.Sprintf("datacenter Id can't be greater than %d or less than 0", dataCenterId))
 	}
 
@@ -66,7 +66,7 @@ func (self *IdWorker) NextId() int64 {
 		panic(fmt.Sprintf("Clock moved backwards.  Refusing to generate id for %d milliseconds", self.lastTimestamp-timestamp))
 	}
 	if timestamp == self.lastTimestamp {
-		self.sequence = (self.sequence + 1) & SequenceMask
+		self.sequence = (self.sequence + 1) & SEQUENCEMASK
 		if self.sequence == 0 {
 			timestamp = tilNextMillis(self.lastTimestamp)
 		}
@@ -74,7 +74,7 @@ func (self *IdWorker) NextId() int64 {
 		self.sequence = 0
 	}
 	self.lastTimestamp = timestamp
-	id := ((timestamp - twepoch) << TimestampLeftShift) | (self.dataCenterId << DataCenterIdShift) | (self.workerId << WorkerIdShift) | self.sequence
+	id := ((timestamp - TWEPOCH) << TIMESTAMPLEFTSHIFT) | (self.dataCenterId << DATACENTERIDSHIFT) | (self.workerId << WORKERIDSHIFT) | self.sequence
 	// fmt.Printf("id:%d,timestamp:%d,timestamp - twepoch:%d,dataCenterId:%d,DataCenterIdShift:%d,workerId:%d,WorkerIdShift:%d,sequence:%d\n", id, timestamp, (timestamp - twepoch), self.dataCenterId, DataCenterIdShift, self.workerId, WorkerIdShift, self.sequence)
 	return id
 }
